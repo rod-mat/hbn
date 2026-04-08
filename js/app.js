@@ -24,6 +24,17 @@ const FIGURE_SLOTS = [
     defaultCaption: '(PL simulado)', gridClass: 'fg-lum' },
 ];
 
+const PAGE_FORMATS = {
+  'a4-portrait':      { w: 794, h: 1123, label: 'A4 Portrait',      jsPDF: { unit: 'mm', format: 'a4',     orientation: 'portrait'  } },
+  'a4-landscape':     { w: 1123, h: 794, label: 'A4 Landscape',     jsPDF: { unit: 'mm', format: 'a4',     orientation: 'landscape' } },
+  'letter-portrait':  { w: 816, h: 1056, label: 'Letter Portrait',  jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait'  } },
+  'letter-landscape': { w: 1056, h: 816, label: 'Letter Landscape', jsPDF: { unit: 'mm', format: 'letter', orientation: 'landscape' } },
+};
+
+function getPageDims() {
+  return PAGE_FORMATS[state.pageFormat || 'a4-portrait'];
+}
+
 const DEFAULT_STATE = {
   meta: {
     titulo: 'Defectos puntuales en h-BN monocapa',
@@ -53,6 +64,7 @@ const DEFAULT_STATE = {
   ],
   footer_right: 'VASP / Quantum ESPRESSO · HSE06',
   logo: null,  // base64 data URL
+  pageFormat: 'a4-portrait',
 };
 
 /* ─── State ─── */
@@ -111,8 +123,12 @@ function resetState() {
 
 function renderPreview() {
   const page = $('#ficha-page');
+  const dims = getPageDims();
+  page.style.width = dims.w + 'px';
+  page.style.height = dims.h + 'px';
   page.innerHTML = buildFichaHTML();
   initPreviewDropzones();
+  updateScale();
 }
 
 function buildFichaHTML() {
@@ -272,12 +288,14 @@ function renderAll() {
 
 function init() {
   state = loadState() || deepClone(DEFAULT_STATE);
+  if (!state.pageFormat) state.pageFormat = 'a4-portrait';
   renderAll();
   updateScale();
   bindToolbar();
   bindTabs();
   bindEditorEvents();
   bindLogoEvents();
+  bindFormatSelector();
   window.addEventListener('resize', updateScale);
 }
 
@@ -287,6 +305,17 @@ function bindToolbar() {
   $('#btn-export').addEventListener('click', handleExportJSON);
   $('#btn-pdf').addEventListener('click', handleExportPDF);
   $('#btn-reset').addEventListener('click', resetState);
+}
+
+function bindFormatSelector() {
+  const sel = $('#sel-format');
+  sel.value = state.pageFormat || 'a4-portrait';
+  sel.addEventListener('change', (e) => {
+    state.pageFormat = e.target.value;
+    saveState();
+    renderPreview();
+    showToast('Formato: ' + PAGE_FORMATS[state.pageFormat].label, 'info');
+  });
 }
 
 function bindTabs() {
@@ -555,19 +584,22 @@ function handleExportJSON() {
 
 async function handleExportPDF() {
   const fichaEl = $('#ficha-page');
+  const dims = getPageDims();
   showToast('Generando PDF…', 'info');
 
   // Temporarily reset scale for full-res render
   const scaler = $('#ficha-scaler');
   const prevTransform = scaler.style.transform;
+  const prevHeight = scaler.style.height;
   scaler.style.transform = 'none';
+  scaler.style.height = 'auto';
 
   const opt = {
     margin: 0,
     filename: `ficha_defectos_${state.meta.fecha || 'hbn'}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true, logging: false },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    jsPDF: dims.jsPDF,
   };
 
   try {
@@ -577,6 +609,7 @@ async function handleExportPDF() {
     showToast('Error al generar PDF: ' + err.message, 'error');
   } finally {
     scaler.style.transform = prevTransform;
+    scaler.style.height = prevHeight;
   }
 }
 
@@ -587,15 +620,16 @@ async function handleExportPDF() {
 function updateScale() {
   const container = $('#preview-container');
   if (!container) return;
+  const dims = getPageDims();
   const cw = container.clientWidth - 48;
   const ch = container.clientHeight - 48;
-  const scaleX = cw / 794;
-  const scaleY = ch / 1123;
+  const scaleX = cw / dims.w;
+  const scaleY = ch / dims.h;
   const scale = Math.min(scaleX, scaleY, 1);
   const scaler = $('#ficha-scaler');
   scaler.style.transform = `scale(${scale})`;
-  scaler.style.width = `${794}px`;
-  scaler.style.height = `${1123 * scale}px`;
+  scaler.style.width = `${dims.w}px`;
+  scaler.style.height = `${dims.h * scale}px`;
   scaler.style.transformOrigin = 'top center';
 }
 

@@ -121,6 +121,31 @@ input, textarea { font-family: inherit; }
   background: var(--border);
   margin: 0 4px;
 }
+.tb-select {
+  padding: 5px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b949e'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
+}
+.tb-select:hover { border-color: var(--accent); }
+.tb-select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(245,196,0,.1); }
+.tb-select option {
+  background: var(--bg-surface);
+  color: var(--text);
+}
 
 /* ─── Main Layout ─── */
 #app-main {
@@ -496,7 +521,7 @@ input, textarea { font-family: inherit; }
 .ficha-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: 123px 99px 222px 1fr;
+  grid-template-columns: 30fr 24fr 54fr 63fr;
   grid-template-rows: 55fr 48fr;
   gap: 7px;
   min-height: 0;
