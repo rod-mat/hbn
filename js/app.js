@@ -65,10 +65,12 @@ const DEFAULT_STATE = {
   footer_right: 'VASP / Quantum ESPRESSO · HSE06',
   logo: null,  // base64 data URL
   pageFormat: 'a4-portrait',
+  headerLabels: {},  // slot_id -> custom header label
 };
 
 /* ─── State ─── */
 let state = {};
+let manualZoom = null;  // null = auto-fit, number = manual multiplier
 
 /* ─── Helpers ─── */
 const $ = (sel) => document.querySelector(sel);
@@ -149,6 +151,8 @@ function buildFichaHTML() {
     const cap = fig?.caption || slot.defaultCaption;
     const headerClass = slot.headerTextDark ? ' header-gold' : '';
 
+    const customLabel = state.headerLabels?.[slot.id] || slot.headerLabel;
+
     let bodyContent;
     if (fig?.dataUrl) {
       bodyContent = `<img src="${fig.dataUrl}" alt="${slot.label}" />`;
@@ -163,7 +167,7 @@ function buildFichaHTML() {
     if (slot.id === '_specs') return ''; // handled separately
 
     return `<div class="fig-cell ${slot.gridClass}" data-slot="${slot.id}">
-      <div class="fig-cell-header${headerClass}" style="background:${slot.headerBg}">${slot.headerLabel}</div>
+      <div class="fig-cell-header${headerClass}" style="background:${slot.headerBg}">${customLabel}</div>
       <div class="fig-cell-body">${bodyContent}</div>
       <div class="drop-overlay">Soltar imagen</div>
     </div>`;
@@ -248,6 +252,7 @@ function renderFigsEditor() {
       ? `<img src="${fig.dataUrl}" alt="${slot.label}" />`
       : `<span class="thumb-hint">Click o arrastra</span>`;
     const caption = fig?.caption || slot.defaultCaption;
+    const headerLabel = state.headerLabels?.[slot.id] || slot.headerLabel;
 
     return `<div class="fig-card" data-slot="${slot.id}">
       <div class="fig-card-header" style="background:${slot.headerBg}${slot.headerTextDark ? ';color:#1a1a18' : ''}">
@@ -255,6 +260,8 @@ function renderFigsEditor() {
       </div>
       <div class="fig-card-body">
         <div class="fig-card-thumb" data-slot="${slot.id}">${thumbContent}</div>
+        <input type="text" value="${escapeHtml(headerLabel)}" placeholder="Título del encabezado"
+               data-role="fig-header" data-slot="${slot.id}" class="fig-header-input" />
         <input type="text" value="${escapeHtml(caption)}" placeholder="Caption"
                data-role="fig-caption" data-slot="${slot.id}" />
         <div class="fig-card-actions">
@@ -289,6 +296,7 @@ function renderAll() {
 function init() {
   state = loadState() || deepClone(DEFAULT_STATE);
   if (!state.pageFormat) state.pageFormat = 'a4-portrait';
+  if (!state.headerLabels) state.headerLabels = {};
   renderAll();
   updateScale();
   bindToolbar();
@@ -296,6 +304,7 @@ function init() {
   bindEditorEvents();
   bindLogoEvents();
   bindFormatSelector();
+  bindZoomControls();
   window.addEventListener('resize', updateScale);
 }
 
@@ -316,6 +325,42 @@ function bindFormatSelector() {
     renderPreview();
     showToast('Formato: ' + PAGE_FORMATS[state.pageFormat].label, 'info');
   });
+}
+
+function bindZoomControls() {
+  $('#btn-zoom-in').addEventListener('click', () => {
+    if (manualZoom === null) manualZoom = getCurrentAutoScale();
+    manualZoom = Math.min(manualZoom + 0.1, 3);
+    applyZoom();
+  });
+  $('#btn-zoom-out').addEventListener('click', () => {
+    if (manualZoom === null) manualZoom = getCurrentAutoScale();
+    manualZoom = Math.max(manualZoom - 0.1, 0.2);
+    applyZoom();
+  });
+  $('#btn-zoom-fit').addEventListener('click', () => {
+    manualZoom = null;
+    updateScale();
+  });
+}
+
+function getCurrentAutoScale() {
+  const container = $('#preview-container');
+  if (!container) return 1;
+  const dims = getPageDims();
+  const cw = container.clientWidth - 48;
+  const ch = container.clientHeight - 48;
+  return Math.min(cw / dims.w, ch / dims.h, 1);
+}
+
+function applyZoom() {
+  const dims = getPageDims();
+  const scaler = $('#ficha-scaler');
+  scaler.style.transform = `scale(${manualZoom})`;
+  scaler.style.width = `${dims.w}px`;
+  scaler.style.height = `${dims.h * manualZoom}px`;
+  scaler.style.transformOrigin = 'top center';
+  $('#zoom-level').textContent = Math.round(manualZoom * 100) + '%';
 }
 
 function bindTabs() {
@@ -359,6 +404,16 @@ function bindEditorEvents() {
       const row = e.target.closest('.ref-row');
       const idx = parseInt(row.dataset.idx);
       state.referencias[idx] = e.target.value;
+      saveState();
+      renderPreview();
+      return;
+    }
+
+    // Fig header label
+    if (e.target.dataset.role === 'fig-header') {
+      const slot = e.target.dataset.slot;
+      if (!state.headerLabels) state.headerLabels = {};
+      state.headerLabels[slot] = e.target.value;
       saveState();
       renderPreview();
       return;
@@ -618,6 +673,7 @@ async function handleExportPDF() {
    ═══════════════════════════════════════════════════════ */
 
 function updateScale() {
+  if (manualZoom !== null) { applyZoom(); return; }
   const container = $('#preview-container');
   if (!container) return;
   const dims = getPageDims();
@@ -631,6 +687,8 @@ function updateScale() {
   scaler.style.width = `${dims.w}px`;
   scaler.style.height = `${dims.h * scale}px`;
   scaler.style.transformOrigin = 'top center';
+  const zoomLabel = $('#zoom-level');
+  if (zoomLabel) zoomLabel.textContent = 'Auto';
 }
 
 /* ═══════════════════════════════════════════════════════
