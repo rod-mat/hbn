@@ -71,6 +71,7 @@ const DEFAULT_STATE = {
 /* ─── State ─── */
 let state = {};
 let manualZoom = null;  // null = auto-fit, number = manual multiplier
+let panX = 0, panY = 0; // pan offset in pixels
 
 /* ─── Helpers ─── */
 const $ = (sel) => document.querySelector(sel);
@@ -305,6 +306,7 @@ function init() {
   bindLogoEvents();
   bindFormatSelector();
   bindZoomControls();
+  bindPreviewMouse();
   window.addEventListener('resize', updateScale);
 }
 
@@ -340,7 +342,67 @@ function bindZoomControls() {
   });
   $('#btn-zoom-fit').addEventListener('click', () => {
     manualZoom = null;
+    panX = 0; panY = 0;
     updateScale();
+  });
+}
+
+function bindPreviewMouse() {
+  const area = $('#preview-area');
+
+  // ── Scroll wheel → zoom ──
+  area.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (manualZoom === null) manualZoom = getCurrentAutoScale();
+    const delta = e.deltaY > 0 ? -0.05 : 0.05;
+    manualZoom = Math.max(0.1, Math.min(3, manualZoom + delta));
+    applyZoom();
+  }, { passive: false });
+
+  // ── Middle button drag → pan ──
+  let isPanning = false;
+  let panStartX = 0, panStartY = 0;
+  let lastMiddleDown = 0;
+
+  area.addEventListener('mousedown', (e) => {
+    if (e.button !== 1) return; // only middle button
+    e.preventDefault();
+
+    // Double middle-click detection
+    const now = Date.now();
+    if (now - lastMiddleDown < 350) {
+      manualZoom = null;
+      panX = 0; panY = 0;
+      updateScale();
+      lastMiddleDown = 0;
+      return;
+    }
+    lastMiddleDown = now;
+
+    // Start panning
+    isPanning = true;
+    panStartX = e.clientX - panX;
+    panStartY = e.clientY - panY;
+    area.style.cursor = 'grabbing';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isPanning) return;
+    panX = e.clientX - panStartX;
+    panY = e.clientY - panStartY;
+    applyZoom();
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 1 && isPanning) {
+      isPanning = false;
+      area.style.cursor = '';
+    }
+  });
+
+  // Prevent default middle-click auto-scroll behavior
+  area.addEventListener('auxclick', (e) => {
+    if (e.button === 1) e.preventDefault();
   });
 }
 
@@ -356,7 +418,7 @@ function getCurrentAutoScale() {
 function applyZoom() {
   const dims = getPageDims();
   const scaler = $('#ficha-scaler');
-  scaler.style.transform = `scale(${manualZoom})`;
+  scaler.style.transform = `translate(${panX}px, ${panY}px) scale(${manualZoom})`;
   scaler.style.width = `${dims.w}px`;
   scaler.style.height = `${dims.h * manualZoom}px`;
   scaler.style.transformOrigin = 'top center';
@@ -674,6 +736,7 @@ async function handleExportPDF() {
 
 function updateScale() {
   if (manualZoom !== null) { applyZoom(); return; }
+  panX = 0; panY = 0;
   const container = $('#preview-container');
   if (!container) return;
   const dims = getPageDims();
