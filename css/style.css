@@ -479,6 +479,11 @@ input, textarea { font-family: inherit; }
   align-items: center;
   justify-content: center;
 }
+.preview-container::-webkit-scrollbar { width: 8px; height: 8px; }
+.preview-container::-webkit-scrollbar-track { background: rgba(0,0,0,.2); }
+.preview-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.preview-container::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+.preview-container::-webkit-scrollbar-corner { background: transparent; }
 .ficha-scaler {
   transform-origin: top center;
   transition: transform .3s ease;

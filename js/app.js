@@ -359,16 +359,16 @@ function bindPreviewMouse() {
     applyZoom();
   }, { passive: false });
 
-  // ── Middle button drag → pan ──
+  // ── Middle button drag → pan via scroll ──
   let isPanning = false;
-  let panStartX = 0, panStartY = 0;
+  let lastX = 0, lastY = 0;
   let lastMiddleDown = 0;
 
   area.addEventListener('mousedown', (e) => {
-    if (e.button !== 1) return; // only middle button
+    if (e.button !== 1) return;
     e.preventDefault();
 
-    // Double middle-click detection
+    // Double middle-click → reset
     const now = Date.now();
     if (now - lastMiddleDown < 350) {
       manualZoom = null;
@@ -379,18 +379,19 @@ function bindPreviewMouse() {
     }
     lastMiddleDown = now;
 
-    // Start panning
     isPanning = true;
-    panStartX = e.clientX - panX;
-    panStartY = e.clientY - panY;
+    lastX = e.clientX;
+    lastY = e.clientY;
     area.style.cursor = 'grabbing';
   });
 
   window.addEventListener('mousemove', (e) => {
     if (!isPanning) return;
-    panX = e.clientX - panStartX;
-    panY = e.clientY - panStartY;
-    applyZoom();
+    const container = $('#preview-container');
+    container.scrollLeft -= (e.clientX - lastX);
+    container.scrollTop -= (e.clientY - lastY);
+    lastX = e.clientX;
+    lastY = e.clientY;
   });
 
   window.addEventListener('mouseup', (e) => {
@@ -400,7 +401,6 @@ function bindPreviewMouse() {
     }
   });
 
-  // Prevent default middle-click auto-scroll behavior
   area.addEventListener('auxclick', (e) => {
     if (e.button === 1) e.preventDefault();
   });
@@ -418,10 +418,26 @@ function getCurrentAutoScale() {
 function applyZoom() {
   const dims = getPageDims();
   const scaler = $('#ficha-scaler');
-  scaler.style.transform = `translate(${panX}px, ${panY}px) scale(${manualZoom})`;
+  const container = $('#preview-container');
+
+  // Enable scrollbars and top-left alignment for overflow
+  container.style.overflow = 'auto';
+  container.style.alignItems = 'flex-start';
+  container.style.justifyContent = 'flex-start';
+
+  scaler.style.transform = `scale(${manualZoom})`;
+  scaler.style.transformOrigin = 'top left';
   scaler.style.width = `${dims.w}px`;
-  scaler.style.height = `${dims.h * manualZoom}px`;
-  scaler.style.transformOrigin = 'top center';
+  scaler.style.height = `${dims.h}px`;
+
+  // Margins compensate layout so container knows the visual size → scrollbars
+  const extraW = dims.w * (manualZoom - 1);
+  const extraH = dims.h * (manualZoom - 1);
+  scaler.style.marginRight = `${Math.max(0, extraW) + 24}px`;
+  scaler.style.marginBottom = `${Math.max(0, extraH) + 24}px`;
+  scaler.style.marginLeft = '24px';
+  scaler.style.marginTop = '24px';
+
   $('#zoom-level').textContent = Math.round(manualZoom * 100) + '%';
 }
 
@@ -739,6 +755,12 @@ function updateScale() {
   panX = 0; panY = 0;
   const container = $('#preview-container');
   if (!container) return;
+
+  // Reset to centered, no-scroll mode
+  container.style.overflow = 'hidden';
+  container.style.alignItems = 'center';
+  container.style.justifyContent = 'center';
+
   const dims = getPageDims();
   const cw = container.clientWidth - 48;
   const ch = container.clientHeight - 48;
@@ -747,9 +769,14 @@ function updateScale() {
   const scale = Math.min(scaleX, scaleY, 1);
   const scaler = $('#ficha-scaler');
   scaler.style.transform = `scale(${scale})`;
+  scaler.style.transformOrigin = 'top center';
   scaler.style.width = `${dims.w}px`;
   scaler.style.height = `${dims.h * scale}px`;
-  scaler.style.transformOrigin = 'top center';
+  // Clear manual-zoom margins
+  scaler.style.marginRight = '';
+  scaler.style.marginBottom = '';
+  scaler.style.marginLeft = '';
+  scaler.style.marginTop = '';
   const zoomLabel = $('#zoom-level');
   if (zoomLabel) zoomLabel.textContent = 'Auto';
 }
