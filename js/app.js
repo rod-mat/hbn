@@ -357,32 +357,49 @@ function bindPreviewMouse() {
     const delta = e.deltaY > 0 ? -0.05 : 0.05;
     manualZoom = Math.max(0.1, Math.min(3, manualZoom + delta));
     applyZoom();
+    area.style.cursor = 'grab';
   }, { passive: false });
 
-  // ── Middle button drag → pan via scroll ──
+  // ── Drag to pan (middle button always, left button when zoomed) ──
   let isPanning = false;
+  let panButton = -1;
   let lastX = 0, lastY = 0;
   let lastMiddleDown = 0;
 
   area.addEventListener('mousedown', (e) => {
-    if (e.button !== 1) return;
-    e.preventDefault();
-
-    // Double middle-click → reset
-    const now = Date.now();
-    if (now - lastMiddleDown < 350) {
-      manualZoom = null;
-      panX = 0; panY = 0;
-      updateScale();
-      lastMiddleDown = 0;
+    // Middle button: always pan
+    if (e.button === 1) {
+      e.preventDefault();
+      // Double middle-click → reset
+      const now = Date.now();
+      if (now - lastMiddleDown < 350) {
+        manualZoom = null;
+        panX = 0; panY = 0;
+        updateScale();
+        area.style.cursor = '';
+        lastMiddleDown = 0;
+        return;
+      }
+      lastMiddleDown = now;
+      isPanning = true;
+      panButton = 1;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      area.style.cursor = 'grabbing';
       return;
     }
-    lastMiddleDown = now;
 
-    isPanning = true;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    area.style.cursor = 'grabbing';
+    // Left button: only pan when zoomed in
+    if (e.button === 0 && manualZoom !== null) {
+      // Don't pan if clicking on an interactive element inside the ficha
+      if (e.target.closest('input, button, select, [data-action]')) return;
+      e.preventDefault();
+      isPanning = true;
+      panButton = 0;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      area.style.cursor = 'grabbing';
+    }
   });
 
   window.addEventListener('mousemove', (e) => {
@@ -395,9 +412,10 @@ function bindPreviewMouse() {
   });
 
   window.addEventListener('mouseup', (e) => {
-    if (e.button === 1 && isPanning) {
+    if (isPanning && e.button === panButton) {
       isPanning = false;
-      area.style.cursor = '';
+      panButton = -1;
+      area.style.cursor = manualZoom !== null ? 'grab' : '';
     }
   });
 
