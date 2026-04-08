@@ -592,7 +592,11 @@ function updateScale() {
   const scaleX = cw / 794;
   const scaleY = ch / 1123;
   const scale = Math.min(scaleX, scaleY, 1);
-  $('#ficha-scaler').style.transform = `scale(${scale})`;
+  const scaler = $('#ficha-scaler');
+  scaler.style.transform = `scale(${scale})`;
+  scaler.style.width = `${794}px`;
+  scaler.style.height = `${1123 * scale}px`;
+  scaler.style.transformOrigin = 'top center';
 }
 
 /* ═══════════════════════════════════════════════════════
