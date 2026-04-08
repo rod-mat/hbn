@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ficha de Defectos · Editor</title>
+  <meta name="description" content="Editor visual de fichas técnicas para defectos puntuales en h-BN" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ===== TOOLBAR ===== -->
+  <header id="toolbar">
+    <div class="toolbar-left">
+      <span class="brand-icon">🔬</span>
+      <h1 class="brand-title">Ficha Editor</h1>
+      <span class="brand-badge">h-BN</span>
+    </div>
+    <div class="toolbar-right">
+      <button id="btn-import" class="tb-btn" title="Importar JSON">
+        <span class="tb-icon">📥</span><span class="tb-label">Importar</span>
+      </button>
+      <button id="btn-export" class="tb-btn" title="Exportar JSON">
+        <span class="tb-icon">📤</span><span class="tb-label">Exportar</span>
+      </button>
+      <div class="tb-divider"></div>
+      <button id="btn-pdf" class="tb-btn tb-primary" title="Descargar PDF">
+        <span class="tb-icon">📄</span><span class="tb-label">PDF</span>
+      </button>
+      <button id="btn-reset" class="tb-btn tb-danger" title="Restaurar valores">
+        <span class="tb-icon">🔄</span>
+      </button>
+    </div>
+    <input type="file" id="file-import" accept=".json" hidden />
+  </header>
+
+  <!-- ===== MAIN LAYOUT ===== -->
+  <main id="app-main">
+    <!-- Sidebar Editor -->
+    <aside id="sidebar">
+      <nav class="sidebar-tabs" role="tablist">
+        <button class="tab active" data-tab="meta" role="tab">📋 Metadatos</button>
+        <button class="tab" data-tab="specs" role="tab">⚙️ Specs</button>
+        <button class="tab" data-tab="figs" role="tab">🖼️ Figuras</button>
+        <button class="tab" data-tab="refs" role="tab">📚 Refs</button>
+      </nav>
+
+      <div class="sidebar-body">
+        <!-- META -->
+        <div class="tab-panel active" id="panel-meta">
+          <div class="form-group">
+            <label for="inp-titulo">Título principal</label>
+            <input type="text" id="inp-titulo" data-field="meta.titulo" />
+          </div>
+          <div class="form-group">
+            <label for="inp-subtitulo">Subtítulo</label>
+            <input type="text" id="inp-subtitulo" data-field="meta.subtitulo" />
+          </div>
+          <div class="form-group">
+            <label for="inp-autor">Autor</label>
+            <input type="text" id="inp-autor" data-field="meta.autor" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="inp-fecha">Fecha</label>
+              <input type="date" id="inp-fecha" data-field="meta.fecha" />
+            </div>
+            <div class="form-group">
+              <label for="inp-version">Versión</label>
+              <input type="text" id="inp-version" data-field="meta.version" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Logo institucional</label>
+            <div class="logo-upload" id="logo-dropzone">
+              <div class="logo-preview" id="logo-preview">
+                <span class="logo-placeholder-text">Arrastra logo aquí</span>
+              </div>
+              <div class="logo-actions">
+                <button class="btn-sm" id="btn-logo-upload">Subir</button>
+                <button class="btn-sm btn-remove" id="btn-logo-remove" hidden>Quitar</button>
+              </div>
+            </div>
+            <input type="file" id="file-logo" accept="image/*" hidden />
+          </div>
+        </div>
+
+        <!-- SPECS -->
+        <div class="tab-panel" id="panel-specs">
+          <p class="panel-hint">Usa <code>_{x}</code> para subíndice y <code>^{x}</code> para superíndice.</p>
+          <div id="specs-list"></div>
+          <button class="btn-add" id="btn-add-spec">+ Agregar campo</button>
+        </div>
+
+        <!-- FIGURES -->
+        <div class="tab-panel" id="panel-figs">
+          <p class="panel-hint">Arrastra imágenes a los slots o usa el botón de subir.</p>
+          <div id="figs-list"></div>
+        </div>
+
+        <!-- REFERENCES -->
+        <div class="tab-panel" id="panel-refs">
+          <div id="refs-list"></div>
+          <button class="btn-add" id="btn-add-ref">+ Agregar referencia</button>
+          <div class="form-group" style="margin-top:16px">
+            <label for="inp-footer-right">Pie de página (derecha)</label>
+            <input type="text" id="inp-footer-right" data-field="footer_right" />
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Preview -->
+    <section id="preview-area">
+      <div class="preview-container" id="preview-container">
+        <div class="ficha-scaler" id="ficha-scaler">
+          <div class="ficha-a4" id="ficha-page">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast-container"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
